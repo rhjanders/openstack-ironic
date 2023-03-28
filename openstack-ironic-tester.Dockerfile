@@ -1,7 +1,7 @@
 FROM ubi8
 
 RUN dnf upgrade -y \
- && dnf install -y python3-devel python3-pip \
+ && dnf install -y python3-devel python3-pip libpq-devel \
  && dnf clean all \
  && rm -rf /var/cache/yum \
  && python3 -m pip install tox
