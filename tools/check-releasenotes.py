@@ -1,4 +1,4 @@
-#!/usr/bin/python -tt
+#!/usr/bin/python3 -tt
 
 # Copyright (c) 2017 Intel Corporation
 #
