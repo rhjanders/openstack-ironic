@@ -102,6 +102,11 @@ class WarningsFixture(fixtures.Fixture):
             category=UserWarning,
         )
 
+        # NOTE(gibi): The UUIDFields emits a warning if the value is not a
+        # valid UUID. Let's escalate that to an exception in the test to
+        # prevent adding violations.
+        warnings.filterwarnings('error', message='.* is an invalid UUID.')
+
         # Enable deprecation warnings to capture upcoming SQLAlchemy changes
 
         warnings.filterwarnings(
@@ -122,16 +127,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'error',
             module='ironic',
-            category=sqla_exc.SAWarning,
-        )
-
-        # ...but filter everything out until we get around to fixing them
-        # TODO(stephenfin): Fix all of these
-
-        warnings.filterwarnings(
-            'ignore',
-            module='ironic',
-            message='SELECT statement has a cartesian product ',
             category=sqla_exc.SAWarning,
         )
 
