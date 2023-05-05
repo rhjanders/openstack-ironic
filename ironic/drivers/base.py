@@ -1224,7 +1224,7 @@ class InspectInterface(BaseInterface):
     """Interface for inspection-related actions."""
     interface_type = 'inspect'
 
-    ESSENTIAL_PROPERTIES = {'memory_mb', 'local_gb', 'cpus', 'cpu_arch'}
+    ESSENTIAL_PROPERTIES = {'memory_mb', 'local_gb', 'cpu_arch'}
     """The properties required by scheduler/deploy."""
 
     @abc.abstractmethod
@@ -1662,7 +1662,7 @@ class NetworkInterface(BaseInterface):
         """
 
     def need_power_on(self, task):
-        """Check if ironic node must be powered on before applying network changes
+        """Check if node must be powered on before applying network changes
 
         :param task: A TaskManager instance.
         :returns: Boolean.

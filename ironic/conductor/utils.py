@@ -499,6 +499,11 @@ def cleaning_error_handler(task, logmsg, errmsg=None, traceback=False,
     # NOTE(dtantsur): avoid overwriting existing maintenance_reason
     if not node.maintenance_reason and set_maintenance:
         node.maintenance_reason = errmsg
+
+    if CONF.conductor.poweroff_in_cleanfail:
+        # NOTE(NobodyCam): Power off node in clean fail
+        node_power_action(task, states.POWER_OFF)
+
     node.save()
 
     if set_fail_state and node.provision_state != states.CLEANFAIL:
@@ -803,7 +808,6 @@ def power_state_error_handler(e, node, power_state):
                     {'node': node.uuid, 'power_state': power_state})
 
 
-@task_manager.require_exclusive_lock
 def validate_port_physnet(task, port_obj):
     """Validate the consistency of physical networks of ports in a portgroup.
 
