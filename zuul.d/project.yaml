@@ -18,6 +18,8 @@
         - ironic-tempest-functional-rbac-scope-enforced:
             voting: false
         - ironic-grenade
+        - ironic-grenade-skip-level:
+            voting: false
         - ironic-standalone
         - ironic-standalone-redfish
         - ironic-tempest-bios-redfish-pxe
@@ -35,6 +37,7 @@
         - ironic-tempest-bfv
         - ironic-tempest-ipa-partition-uefi-pxe-grub2
         - metalsmith-integration-glance-centos8-legacy
+        - metal3-integration
         # Non-voting jobs
         - ironic-tox-bandit:
             voting: false
@@ -60,8 +63,6 @@
             voting: false
         - bifrost-benchmark-ironic:
             voting: false
-        - metal3-integration:
-            voting: false
     gate:
       jobs:
         - ironic-tox-unit-with-driver-libs
@@ -83,6 +84,7 @@
         - ironic-tempest-bfv
         - ironic-tempest-ipa-partition-uefi-pxe-grub2
         - metalsmith-integration-glance-centos8-legacy
+        - metal3-integration
     experimental:
       jobs:
         # TODO(dtantsur): these jobs are useful but currently hopelessly

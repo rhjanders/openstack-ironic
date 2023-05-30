@@ -135,6 +135,7 @@ class NodeBase(Base):
         Index('conductor_group_idx', 'conductor_group'),
         Index('resource_class_idx', 'resource_class'),
         Index('shard_idx', 'shard'),
+        Index('parent_node_idx', 'parent_node'),
         table_args())
     id = Column(Integer, primary_key=True)
     uuid = Column(String(36))
@@ -199,6 +200,7 @@ class NodeBase(Base):
     boot_interface = Column(String(255), nullable=True)
     console_interface = Column(String(255), nullable=True)
     deploy_interface = Column(String(255), nullable=True)
+    firmware_interface = Column(String(255), nullable=True)
     inspect_interface = Column(String(255), nullable=True)
     management_interface = Column(String(255), nullable=True)
     network_interface = Column(String(255), nullable=True)
@@ -211,11 +213,10 @@ class NodeBase(Base):
     storage_interface = Column(String(255), nullable=True)
     power_interface = Column(String(255), nullable=True)
     vendor_interface = Column(String(255), nullable=True)
-
     boot_mode = Column(String(16), nullable=True)
     secure_boot = Column(Boolean, nullable=True)
-
     shard = Column(String(255), nullable=True)
+    parent_node = Column(String(36), nullable=True)
 
 
 class Node(NodeBase):
@@ -497,6 +498,22 @@ class NodeInventory(Base):
     inventory_data = Column(db_types.JsonEncodedDict(mysql_as_long=True))
     plugin_data = Column(db_types.JsonEncodedDict(mysql_as_long=True))
     node_id = Column(Integer, ForeignKey('nodes.id'), nullable=True)
+
+
+class FirmwareInformation(Base):
+    """Represents the firmware information of a bare metal node."""
+    __tablename__ = "firmware_information"
+    __table_args__ = (
+        schema.UniqueConstraint(
+            'node_id', 'component',
+            name='uniq_nodecomponent0node_id0component'),
+        table_args())
+    id = Column(Integer, primary_key=True)
+    node_id = Column(Integer, ForeignKey('nodes.id'), nullable=False)
+    component = Column(String(255), nullable=False)
+    initial_version = Column(String(255), nullable=False)
+    current_version = Column(String(255), nullable=True)
+    last_version_flashed = Column(String(255), nullable=True)
 
 
 def get_class(model_name):

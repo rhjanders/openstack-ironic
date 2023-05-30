@@ -207,6 +207,12 @@ fields_for_conductor:
   in: query
   required: false
   type: array
+include_children:
+  description: |
+    Whether to show child nodes in the node list, which are normally hidden.
+  in: query
+  required: false
+  type: boolean
 limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit
@@ -1318,6 +1324,13 @@ nodes:
 owner:
   description: |
     A string or UUID of the tenant who owns the object.
+  in: body
+  required: false
+  type: string
+parent_node:
+  description: |
+    An optional UUID which can be used to denote the "parent" baremetal
+    node.
   in: body
   required: false
   type: string
