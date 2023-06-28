@@ -527,8 +527,8 @@ class MigrationCheckersMixin(object):
         return data
 
     def _check_c14cef6dfedf(self, engine, data):
-        counts = collections.defaultdict(int)
         with engine.begin() as connection:
+            counts = collections.defaultdict(int)
             result = connection.execute(
                 sqlalchemy.select(
                     models.Node.uuid,
@@ -543,10 +543,10 @@ class MigrationCheckersMixin(object):
                 if _was_inserted(row['uuid']):
                     counts[row['network_interface']] += 1
 
-        # using default config values, we should have 2 flat and one neutron
-        self.assertEqual(2, counts['flat'])
-        self.assertEqual(1, counts['neutron'])
-        self.assertEqual(0, counts[None])
+            # using default conf values, we should have 2 flat and one neutron
+            self.assertEqual(2, counts['flat'])
+            self.assertEqual(1, counts['neutron'])
+            self.assertEqual(0, counts[None])
 
     def _check_60cf717201bc(self, engine, data):
         portgroups = db_utils.get_table(engine, 'portgroups')
@@ -642,8 +642,8 @@ class MigrationCheckersMixin(object):
             result = connection.execute(
                 sqlalchemy.select(models.Portgroup.mode)
             )
-        for row in result:
-            self.assertEqual(CONF.default_portgroup_mode, row['mode'])
+            for row in result:
+                self.assertEqual(CONF.default_portgroup_mode, row['mode'])
 
     def _check_1d6951876d68(self, engine, data):
         nodes = db_utils.get_table(engine, 'nodes')
@@ -719,7 +719,9 @@ class MigrationCheckersMixin(object):
                 models.Node.uuid == data['uuid']
             )
             node = connection.execute(node_stmt).first()
-            data['id'] = node.id
+            # WARNING: Always copy, never directly return a db object or
+            # piece of a db object. It is a sqlalchemy thing.
+            data['id'] = int(node.id)
         return data
 
     def _check_b4130a7fc904(self, engine, data):
@@ -755,7 +757,9 @@ class MigrationCheckersMixin(object):
                 models.Node.id
             ).where(models.Node.uuid == data['uuid'])
             node = connection.execute(node_stmt).first()
-            data['id'] = node.id
+            # WARNING: Always copy, never directly return a db object or
+            # piece of a db object. It is a sqlalchemy thing.
+            data['id'] = int(node.id)
         return data
 
     def _check_82c315d60161(self, engine, data):
@@ -1274,7 +1278,9 @@ class MigrationCheckersMixin(object):
                 models.Node.id
             ).where(models.Node.uuid == data['uuid'])
             node = connection.execute(node_stmt).first()
-            data['id'] = node.id
+            # WARNING: Always copy, never directly return a db object or
+            # piece of a db object. It is a sqlalchemy thing.
+            data['id'] = int(node.id)
 
         return data
 
@@ -1324,6 +1330,12 @@ class MigrationCheckersMixin(object):
             )
             fw_component = connection.execute(fw_cmp_stmt).first()
             self.assertEqual('v1.0.0', fw_component['initial_version'])
+            del_stmt = (
+                sqlalchemy.delete(
+                    models.FirmwareInformation
+                ).where(models.FirmwareInformation.node_id == data['id'])
+            )
+            connection.execute(del_stmt)
 
     def test_upgrade_and_version(self):
         with patch_with_engine(self.engine):
@@ -1341,16 +1353,13 @@ class MigrationCheckersMixin(object):
             self.assertRaises(db_exc.DBMigrationError,
                               self.migration_api.create_schema)
 
-# NOTE(JayF): bug2023316 means we need to disable this for now. We need
-#             to fix the hangs in this test then re-enable it as quickly
-#             as possible
-#    def test_upgrade_twice(self):
-#        with patch_with_engine(self.engine):
-#            self.migration_api.upgrade('31baaf680d2b')
-#            v1 = self.migration_api.version()
-#            self.migration_api.upgrade('head')
-#            v2 = self.migration_api.version()
-#            self.assertNotEqual(v1, v2)
+    def test_upgrade_twice(self):
+        with patch_with_engine(self.engine):
+            self.migration_api.upgrade('31baaf680d2b')
+            v1 = self.migration_api.version()
+            self.migration_api.upgrade('head')
+            v2 = self.migration_api.version()
+            self.assertNotEqual(v1, v2)
 
 
 class TestMigrationsMySQL(MigrationCheckersMixin,
