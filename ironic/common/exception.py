@@ -425,8 +425,8 @@ class Forbidden(IronicException):
     _msg_fmt = _("Requested OpenStack Images API is forbidden")
 
 
-class BadRequest(IronicException):
-    pass
+# TODO(dtantsur): leave only one variant
+BadRequest = Invalid
 
 
 class InvalidEndpoint(IronicException):
@@ -441,12 +441,8 @@ class HTTPForbidden(NotAuthorized):
     _msg_fmt = _("Access was denied to the following resource: %(resource)s")
 
 
-class Unauthorized(IronicException):
-    pass
-
-
-class HTTPNotFound(NotFound):
-    pass
+# TODO(dtantsur): leave only one variant
+HTTPNotFound = NotFound
 
 
 class ConfigNotFound(IronicException):
@@ -874,3 +870,12 @@ class ConcurrentActionLimit(IronicException):
 class SwiftObjectStillExists(IronicException):
     _msg_fmt = _("Clean up failed for swift object %(obj)s during deletion"
                  " of node %(node)s.")
+
+
+class FirmwareComponentAlreadyExists(Conflict):
+    _msg_fmt = _('A Firmware component %(name)s for node %(node)s'
+                 ' already exists.')
+
+
+class FirmwareComponentNotFound(NotFound):
+    _msg_fmt = _("Node %(node)s doesn't have Firmware component %(name)s")
