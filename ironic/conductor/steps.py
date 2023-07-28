@@ -11,6 +11,7 @@
 #    under the License.
 
 import collections
+import time
 
 from oslo_config import cfg
 from oslo_log import log
@@ -30,6 +31,7 @@ CLEANING_INTERFACE_PRIORITY = {
     # by which interface is implementing the clean step. The clean step of the
     # interface with the highest value here, will be executed first in that
     # case.
+    'vendor': 6,
     'power': 5,
     'management': 4,
     'deploy': 3,
@@ -44,6 +46,7 @@ DEPLOYING_INTERFACE_PRIORITY = {
     # TODO(rloo): If we think it makes sense to have the interface priorities
     # the same for cleaning & deploying, replace the two with one e.g.
     # 'INTERFACE_PRIORITIES'.
+    'vendor': 6,
     'power': 5,
     'management': 4,
     'deploy': 3,
@@ -825,6 +828,7 @@ def use_reserved_step_handler(task, step):
     :param step: The requested step.
     """
     step_name = step.get('step')
+    step_args = step.get('args', {})
     if step_name and step_name in RESERVED_STEP_HANDLER_MAPPING.keys():
         call_to_use = RESERVED_STEP_HANDLER_MAPPING[step_name]
         method = call_to_use[0]
@@ -837,3 +841,30 @@ def use_reserved_step_handler(task, step):
     # If we've reached this point, we're going to return None as
     # there is no work for us to do. This allows the caller to
     # take its normal path.
+    if step_name == 'wait':
+        # By default, we enter a wait state.
+        task.process_event('wait')
+        if 'seconds' in step_args:
+            # If we have a seconds argument, just pause.
+            rec_seconds = int(step_args['seconds'])
+            if rec_seconds > CONF.conductor.max_conductor_wait_step_seconds:
+                warning = (
+                    _('A wait time exceeding the configured maximum '
+                      'has been requested. Holding for %s, got %s.') %
+                    (rec_seconds,
+                     CONF.conductor.max_conductor_wait_step_seconds)
+                )
+                utils.node_history_record(task.node, event=warning,
+                                          event_type=task.node.provision_state)
+                LOG.warning(warning)
+                rec_seconds = CONF.conductor.max_conductor_wait_step_seconds
+            _sleep_wrapper(rec_seconds)
+            # Explicitly resume.
+            task.process_event('resume')
+        # Return True, which closed out execution until the next heartbeat.
+        return EXIT_STEPS
+
+
+def _sleep_wrapper(seconds):
+    """Wrapper for sleep to allow for unit testing."""
+    time.sleep(seconds)
