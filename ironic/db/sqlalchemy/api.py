@@ -2305,8 +2305,8 @@ class Connection(api.Connection):
         # initialized, but set them to None just in case.
         instance_uuid = node_uuid = None
 
-        with _session_for_write() as session:
-            try:
+        try:
+            with _session_for_write() as session:
                 query = session.query(models.Allocation)
                 query = add_identity_filter(query, allocation_id)
                 ref = query.one()
@@ -2326,20 +2326,26 @@ class Connection(api.Connection):
                                  'instance_uuid': instance_uuid,
                                  'instance_info': iinfo})
                 session.flush()
-            except NoResultFound:
-                raise exception.AllocationNotFound(allocation=allocation_id)
-            except db_exc.DBDuplicateEntry as exc:
-                if 'name' in exc.columns:
-                    raise exception.AllocationDuplicateName(
-                        name=values['name'])
-                elif 'instance_uuid' in exc.columns:
-                    # Case when the allocation UUID is already used on some
-                    # node as instance_uuid.
-                    raise exception.InstanceAssociated(
-                        instance_uuid=instance_uuid, node=node_uuid)
-                else:
-                    raise
-            return ref
+            # Perform a separate read so the commit closes out on the write
+            # transaction.
+            with _session_for_read() as session:
+                query = session.query(models.Allocation)
+                query = add_identity_filter(query, allocation_id)
+                ref = query.one()
+        except NoResultFound:
+            raise exception.AllocationNotFound(allocation=allocation_id)
+        except db_exc.DBDuplicateEntry as exc:
+            if 'name' in exc.columns:
+                raise exception.AllocationDuplicateName(
+                    name=values['name'])
+            elif 'instance_uuid' in exc.columns:
+                # Case when the allocation UUID is already used on some
+                # node as instance_uuid.
+                raise exception.InstanceAssociated(
+                    instance_uuid=instance_uuid, node=node_uuid)
+            else:
+                raise
+        return ref
 
     @oslo_db_api.retry_on_deadlock
     def take_over_allocation(self, allocation_id, old_conductor_id,
@@ -2357,8 +2363,8 @@ class Connection(api.Connection):
         :returns: True if the take over was successful, False otherwise.
         :raises: AllocationNotFound
         """
-        with _session_for_write() as session:
-            try:
+        try:
+            with _session_for_write() as session:
                 query = session.query(models.Allocation)
                 query = add_identity_filter(query, allocation_id)
                 # NOTE(dtantsur): the FOR UPDATE clause locks the allocation
@@ -2369,10 +2375,10 @@ class Connection(api.Connection):
 
                 ref.update({'conductor_affinity': new_conductor_id})
                 session.flush()
-            except NoResultFound:
-                raise exception.AllocationNotFound(allocation=allocation_id)
-            else:
-                return True
+        except NoResultFound:
+            raise exception.AllocationNotFound(allocation=allocation_id)
+        else:
+            return True
 
     @oslo_db_api.retry_on_deadlock
     def destroy_allocation(self, allocation_id):
@@ -2386,7 +2392,11 @@ class Connection(api.Connection):
             query = add_identity_filter(query, allocation_id)
 
             try:
-                ref = query.one()
+                # NOTE(TheJulia): We explicitly need to indicate we intend
+                # to update the record so we block until the other users of
+                # the row are free, such as the process to match the
+                # allocation to a node.
+                ref = query.with_for_update().one()
             except NoResultFound:
                 raise exception.AllocationNotFound(allocation=allocation_id)
 
