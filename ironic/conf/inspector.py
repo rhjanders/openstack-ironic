@@ -17,6 +17,19 @@ from oslo_config import cfg
 from ironic.common.i18n import _
 from ironic.conf import auth
 
+
+VALID_ADD_PORTS_VALUES = {
+    'all': _('all MAC addresses'),
+    'active': _('MAC addresses of NIC\'s with IP addresses'),
+    'pxe': _('only the MAC address of the PXE NIC'),
+    'disabled': _('do not create any ports'),
+}
+VALID_KEEP_PORTS_VALUES = {
+    'all': _('keep even ports with MAC\'s not present in the inventory'),
+    'present': _('keep only ports with MAC\'s present in the inventory'),
+    'added': _('keep only ports determined by the add_ports option'),
+}
+
 opts = [
     cfg.IntOpt('status_check_period', default=60,
                help=_('period (in seconds) to check status of nodes '
@@ -42,6 +55,20 @@ opts = [
                        'to False if you need to inspect nodes that are not '
                        'supported by boot interfaces (e.g. because they '
                        'don\'t have ports).')),
+    cfg.StrOpt('add_ports',
+               default='pxe',
+               help=_('Which MAC addresses to add as ports during '
+                      'inspection.'),
+               choices=list(VALID_ADD_PORTS_VALUES.items())),
+    cfg.StrOpt('keep_ports',
+               default='all',
+               help=_('Which ports (already present on a node) to keep after '
+                      'inspection.'),
+               choices=list(VALID_KEEP_PORTS_VALUES.items())),
+    cfg.BoolOpt('update_pxe_enabled',
+                default=True,
+                help=_('Whether to update the ports\' pxe_enabled field '
+                       'according to the inspection data.')),
 ]
 
 
