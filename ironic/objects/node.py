@@ -81,7 +81,8 @@ class Node(base.IronicObject, object_base.VersionedObjectDictCompat):
     # Version 1.37: Add shard field
     # Version 1.38: Add parent_node field
     # Version 1.39: Add firmware_interface field
-    VERSION = '1.39'
+    # Version 1.40: Add service_step field
+    VERSION = '1.40'
 
     dbapi = db_api.get_instance()
 
@@ -106,6 +107,11 @@ class Node(base.IronicObject, object_base.VersionedObjectDictCompat):
         # being executed, or None, indicating deployment is not in progress
         # or has not yet started.
         'deploy_step': object_fields.FlexibleDictField(nullable=True),
+
+        # A service step dictionary, indicating the current step
+        # being executed, or None, indicating deployment is not in progress
+        # or has not yet started.
+        'service_step': object_fields.FlexibleDictField(nullable=True),
 
         'raid_config': object_fields.FlexibleDictField(nullable=True),
         'target_raid_config': object_fields.FlexibleDictField(nullable=True),
@@ -752,6 +758,18 @@ class Node(base.IronicObject, object_base.VersionedObjectDictCompat):
         """
         self.instance_info[key] = value
         self._changed_fields.add('instance_info')
+
+    def set_property(self, key, value):
+        """Set a `properties` value.
+
+        Setting a `properties` dict value via this method ensures that this
+        field will be flagged for saving.
+
+        :param key: Key of item to set
+        :param value: Value of item to set
+        """
+        self.properties[key] = value
+        self._changed_fields.add('properties')
 
 
 @base.IronicObjectRegistry.register
