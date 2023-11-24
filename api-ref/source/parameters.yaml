@@ -106,7 +106,7 @@ node_ident:
   type: string
 port_ident:
   description: |
-    The UUID of the port.
+    The UUID or Name of the port.
   in: path
   required: true
   type: string
@@ -760,6 +760,13 @@ default_deploy_interface:
   in: body
   required: true
   type: string
+default_firmware_interface:
+  description: |
+    The default firmware interface used for a node with a dynamic driver, if no
+    firmware interface is specified for the node.
+  in: body
+  required: true
+  type: string
 default_inspect_interface:
   description: |
     The default inspection interface used for a node with a dynamic driver, if
@@ -941,6 +948,12 @@ enabled_console_interfaces:
 enabled_deploy_interfaces:
   description: |
     The enabled deploy interfaces for this driver.
+  in: body
+  required: true
+  type: list
+enabled_firmware_interfaces:
+  description: |
+    The enabled firmware interfaces for this driver.
   in: body
   required: true
   type: list
@@ -1419,6 +1432,12 @@ port_address:
   in: body
   required: true
   type: string
+port_name:
+  description: |
+    The name assigned to the network Port.
+  in: body
+  required: false
+  type: string
 portgroup_address:
   description: |
     Physical hardware address of this Portgroup, typically the hardware
@@ -1785,6 +1804,12 @@ req_port_address:
     MAC address.
   in: body
   required: true
+  type: string
+req_port_name:
+  description: |
+    The name assigned to the network Port.
+  in: body
+  required: false
   type: string
 req_portgroup_address:
   description: |
