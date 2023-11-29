@@ -364,10 +364,11 @@ class CustomAgentDeploy(agent_base.AgentBaseMixin, agent_base.AgentDeployMixin,
                 # Alternatively, we could be in a fast track deployment
                 # and again, we should have nothing to do here.
                 return
-        if node.provision_state in (states.ACTIVE, states.UNRESCUING):
+        if node.provision_state in (states.ACTIVE, states.UNRESCUING,
+                                    states.ADOPTING):
             # Call is due to conductor takeover
             task.driver.boot.prepare_instance(task)
-        elif node.provision_state != states.ADOPTING:
+        else:
             if node.provision_state not in (states.RESCUING, states.RESCUEWAIT,
                                             states.RESCUE, states.RESCUEFAIL):
                 self._update_instance_info(task)
@@ -506,6 +507,14 @@ class AgentDeploy(CustomAgentDeploy):
                 'image_container_format'),
             'stream_raw_images': CONF.agent.stream_raw_images,
         }
+
+        if (CONF.deploy.image_server_auth_strategy != 'noauth'
+            and CONF.deploy.image_server_auth_strategy is not None):
+            image_info['image_server_auth_strategy'] = \
+                CONF.deploy.image_server_auth_strategy
+            image_info['image_server_user'] = CONF.deploy.image_server_user
+            image_info['image_server_password'] =\
+                CONF.deploy.image_server_password
 
         if node.instance_info.get('image_checksum'):
             image_info['checksum'] = node.instance_info['image_checksum']
