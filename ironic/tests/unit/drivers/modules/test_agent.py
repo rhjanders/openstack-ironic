@@ -984,6 +984,7 @@ class TestAgentDeploy(CommonTestsMixin, db_base.DbTestCase):
             self.assertTrue(storage_attach_volumes_mock.called)
             self.assertEqual(2, should_write_image_mock.call_count)
 
+    @mock.patch.object(pxe.PXEBoot, 'prepare_instance', autospec=True)
     @mock.patch.object(flat_network.FlatNetwork, 'add_provisioning_network',
                        spec_set=True, autospec=True)
     @mock.patch.object(pxe.PXEBoot, 'prepare_ramdisk', autospec=True)
@@ -992,7 +993,8 @@ class TestAgentDeploy(CommonTestsMixin, db_base.DbTestCase):
                        autospec=True)
     def test_prepare_adopting(
             self, build_instance_info_mock, build_options_mock,
-            pxe_prepare_ramdisk_mock, add_provisioning_net_mock):
+            pxe_prepare_ramdisk_mock, add_provisioning_net_mock,
+            prepare_instance_mock):
         with task_manager.acquire(
                 self.context, self.node['uuid'], shared=False) as task:
             task.node.provision_state = states.ADOPTING
@@ -1003,6 +1005,7 @@ class TestAgentDeploy(CommonTestsMixin, db_base.DbTestCase):
             self.assertFalse(build_options_mock.called)
             self.assertFalse(pxe_prepare_ramdisk_mock.called)
             self.assertFalse(add_provisioning_net_mock.called)
+            self.assertTrue(prepare_instance_mock.called)
 
     @mock.patch.object(flat_network.FlatNetwork, 'add_provisioning_network',
                        spec_set=True, autospec=True)
@@ -1255,6 +1258,33 @@ class TestAgentDeploy(CommonTestsMixin, db_base.DbTestCase):
                             'http': 'spam.ni'},
                 'no_proxy': '.eggs.com'}
         )
+
+    def test_wirte_image_basic_auth_success(self):
+        cfg.CONF.set_override('image_server_auth_strategy',
+                              'http_basic',
+                              'deploy')
+        cfg.CONF.set_override('image_server_user',
+                              'SpongeBob',
+                              'deploy')
+        cfg.CONF.set_override('image_server_password',
+                              'SquarePants',
+                              'deploy')
+        self._test_write_image(
+            additional_expected_image_info={
+                'image_server_auth_strategy': 'http_basic',
+                'image_server_user': 'SpongeBob',
+                'image_server_password': 'SquarePants'
+            }
+        )
+
+    def test_wirte_image_basic_auth_success_blocked(self):
+        cfg.CONF.set_override('image_server_user',
+                              'SpongeBob',
+                              'deploy')
+        cfg.CONF.set_override('image_server_password',
+                              'SquarePants',
+                              'deploy')
+        self._test_write_image()
 
     def test_write_image_with_no_proxy_without_proxies(self):
         self._test_write_image(
