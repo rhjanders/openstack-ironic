@@ -48,7 +48,7 @@ def _mock_drive(identity, block_size_bytes=None, capacity_bytes=None,
 
 
 def _mock_volume(identity, volume_type=None, raid_type=None,
-                 capacity_bytes=units.Gi):
+                 capacity_bytes=units.Gi, volume_name=None):
     volume = mock.MagicMock(
         _path='/redfish/v1/Systems/1/Storage/1/Volumes/' + identity,
         identity=identity,
@@ -56,7 +56,10 @@ def _mock_volume(identity, volume_type=None, raid_type=None,
         raid_type=raid_type,
         capacity_bytes=capacity_bytes
     )
-    volume.name = 'Volume ' + identity
+    if volume_name:
+        volume.name = volume_name
+    else:
+        volume.name = 'Volume ' + identity
     # Mocking Immediate that does not return anything
     volume.delete.return_value = None
     return volume
@@ -287,13 +290,14 @@ class RedfishRAIDTestCase(db_base.DbTestCase):
                 {
                     'size_gb': 100,
                     'raid_level': '5',
-                    'is_root_volume': True
+                    'is_root_volume': True,
+                    'volume_name': 'test-volume'
                 }
             ]
         }
-        created_volumes = [_mock_volume(
-            '1', raid_type=sushy.RAIDType.RAID5,
-            capacity_bytes=100 * units.Gi)]
+        created_volumes = [_mock_volume('1', raid_type=sushy.RAIDType.RAID5,
+                                        capacity_bytes=100 * units.Gi,
+                                        volume_name='test-volume')]
         volumes = mock.MagicMock()
         # Called after volumes created
         volumes.get_members.return_value = created_volumes
@@ -322,7 +326,8 @@ class RedfishRAIDTestCase(db_base.DbTestCase):
                     {'@odata.id': pre + self.drive_id1},
                     {'@odata.id': pre + self.drive_id2},
                     {'@odata.id': pre + self.drive_id3}
-                ]
+                ],
+                'Name': 'test-volume'
             }
             self.mock_storage.volumes.create.assert_called_once_with(
                 expected_payload, apply_time=sushy.APPLY_TIME_IMMEDIATE)
@@ -337,7 +342,7 @@ class RedfishRAIDTestCase(db_base.DbTestCase):
             self.assertEqual(
                 [{'controller': 'RAID controller 1',
                   'id': '1',
-                  'name': 'Volume 1',
+                  'name': 'test-volume',
                   'raid_level': '5',
                   'size_gb': 100}],
                 task.node.raid_config['logical_disks'])
@@ -696,10 +701,10 @@ class RedfishRAIDTestCase(db_base.DbTestCase):
         created_volumes = [
             _mock_volume(
                 '1', raid_type=sushy.RAIDType.RAID10,
-                capacity_bytes=50 * units.Gi),
+                capacity_bytes=50 * units.Gi, volume_name='root_volume'),
             _mock_volume(
                 '2', raid_type=sushy.RAIDType.RAID5,
-                capacity_bytes=100 * units.Gi)]
+                capacity_bytes=100 * units.Gi, volume_name='data_volume')]
         # Called after volumes created
         self.mock_storage.volumes.get_members.return_value = created_volumes
         mock_get_system.return_value.storage.get_members.return_value = [
@@ -720,7 +725,8 @@ class RedfishRAIDTestCase(db_base.DbTestCase):
                     {'@odata.id': pre + self.drive_id2},
                     {'@odata.id': pre + self.drive_id3},
                     {'@odata.id': pre + self.drive_id4}
-                ]
+                ],
+                'Name': 'root_volume'
             }
             expected_payload2 = {
                 'Encrypted': False,
@@ -731,7 +737,8 @@ class RedfishRAIDTestCase(db_base.DbTestCase):
                     {'@odata.id': pre + self.drive_id2},
                     {'@odata.id': pre + self.drive_id3},
                     {'@odata.id': pre + self.drive_id4}
-                ]
+                ],
+                'Name': 'data_volume'
             }
             self.assertEqual(
                 self.mock_storage.volumes.create.call_count, 2)
@@ -745,12 +752,12 @@ class RedfishRAIDTestCase(db_base.DbTestCase):
             self.assertEqual(
                 [{'controller': 'RAID controller 1',
                   'id': '1',
-                  'name': 'Volume 1',
+                  'name': 'root_volume',
                   'raid_level': '1+0',
                   'size_gb': 50},
                  {'controller': 'RAID controller 1',
                   'id': '2',
-                  'name': 'Volume 2',
+                  'name': 'data_volume',
                   'raid_level': '5',
                   'size_gb': 100}],
                 task.node.raid_config['logical_disks'])
