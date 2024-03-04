@@ -27,18 +27,20 @@
             voting: false
         - ironic-grenade-skip-level:
             voting: false
-        - ironic-standalone
-        - ironic-standalone-redfish
+        - ironic-standalone-redfish:
+            voting: false
         - ironic-tempest-bios-redfish-pxe
         - ironic-tempest-uefi-redfish-vmedia
         - ironic-tempest-ramdisk-bios-snmp-pxe
-        - ironic-tempest-partition-uefi-ipmi-pxe
+        - ironic-tempest-ovn-uefi-ipmi-pxe
         # NOTE(TheJulia) Marking multinode non-voting on 20210311
         # Due to a high failure rate on limestone where the compute1
         # machine never appears to be able to communicate across the
         # vxlan tunnel, possible mtu issue, but non-voting until we
         # understand it in mind for the upcoming release.
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode:
+            voting: false
+        - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode-shard:
             voting: false
         - ironic-tempest-bios-ipmi-direct-tinyipa
         - ironic-tempest-bfv
@@ -78,12 +80,13 @@
         # - ironic-tempest-functional-rbac-scope-enforced
         # NOTE(TheJulia): Disabling until we get a dnsmasq handling fix backported.
         # - ironic-grenade
-        - ironic-standalone
-        - ironic-standalone-redfish
+        # NOTE(JayF): Disabling standalone jobs on 20240228 from voting, there's a
+        # dnsmasq bug only exposed on these jobs.
+        #- ironic-standalone-redfish
         - ironic-tempest-bios-redfish-pxe
         - ironic-tempest-uefi-redfish-vmedia
         - ironic-tempest-ramdisk-bios-snmp-pxe
-        - ironic-tempest-partition-uefi-ipmi-pxe
+        - ironic-tempest-ovn-uefi-ipmi-pxe
         # NOTE(TheJulia): Disabled multinode on 20210311 due to Limestone
         # seeming to be
         # - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode
