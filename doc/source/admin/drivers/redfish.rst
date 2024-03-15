@@ -97,7 +97,7 @@ field:
 .. note::
    The ``redfish_address``, ``redfish_username``, ``redfish_password``,
    and ``redfish_verify_ca`` fields, if changed, will trigger a new session
-   to be establsihed and cached with the BMC. The ``redfish_auth_type`` field
+   to be established and cached with the BMC. The ``redfish_auth_type`` field
    will only be used for the creation of a new cached session, or should
    one be rejected by the BMC.
 
@@ -288,16 +288,15 @@ Then the following script can be used to build an ESP image:
    DEST=/path/to/esp.img
    GRUB2=/path/to/grub.efi
    SHIM=/path/to/shim.efi
-   TEMP_MOUNT=$(mktemp -d)
 
    dd if=/dev/zero of=$DEST bs=4096 count=1024
-   mkfs.fat -s 4 -r 512 -S 4096 $DEST
+   mkfs.msdos -F 12 -n ESP_IMAGE $DEST
 
-   sudo mount $DEST $TEMP_MOUNT
-   sudo mkdir -p $DEST/EFI/BOOT
-   sudo cp "$SHIM" $DEST/EFI/BOOT/BOOTX64.efi
-   sudo cp "$GRUB2" $DEST/EFI/BOOT/GRUBX64.efi
-   sudo umount $TEMP_MOUNT
+   # The following commands require mtools to be installed
+   mmd -i $DEST EFI EFI/BOOT
+   mcopy -i $DEST -v $SHIM ::EFI/BOOT/BOOTX64.efi
+   mcopy -i $DEST -v $GRUB2 ::EFI/BOOT/GRUBX64.efi
+   mdir -i $DEST ::EFI/BOOT
 
 .. note::
    If you use an architecture other than x86-64, you'll need to adjust the
@@ -447,7 +446,7 @@ of the remaining updates will pause.  When the node is taken out of maintenance
 mode, processing of the remaining updates will continue.
 
 When updating the BMC firmware, the BMC may become unavailable for a period of
-time as it resets. In this case, it may be desireable to have the cleaning step
+time as it resets. In this case, it may be desirable to have the cleaning step
 wait after the update has been applied before indicating that the
 update was successful. This allows the BMC time to fully reset before further
 operations are carried out against it. To cause the cleaning step to wait after
@@ -627,7 +626,7 @@ Create Subscription
     :widths: 25, 15, 15, 90
 
     "Destination", "body", "string", "The URI of the destination Event Service"
-    "EventTypes (optional)", "body", "array",  "List of ypes of events that shall be sent to the destination"
+    "EventTypes (optional)", "body", "array",  "List of types of events that shall be sent to the destination"
     "Context (optional)", "body", "string", "A client-supplied string that is stored with the event destination
     subscription"
     "Protocol (optional)", "body", "string", "The protocol type that the event will use for sending
