@@ -87,6 +87,7 @@ RESERVED_STEP_HANDLER_MAPPING = {
     'power_off': [utils.node_power_action, states.POWER_OFF],
     'reboot': [utils.node_power_action, states.REBOOT],
 }
+RESERVED_STEP_NAMES = set(RESERVED_STEP_HANDLER_MAPPING) | {'wait', 'hold'}
 
 # values to enable declariation of how to handle reserved step names
 USED_HANDLER = 'used_handler'
@@ -731,9 +732,10 @@ def _validate_user_steps(task, user_steps, driver_steps, step_type,
             # as we have the original API request context to leverage
             # for RBAC validation.
             continue
-        if user_step.get('step') in ['power_on', 'power_off', 'reboot']:
+        if user_step.get('step') in RESERVED_STEP_NAMES:
             # NOTE(TheJulia): These are flow related steps the conductor
             # resolves internally.
+            result.append(user_step)
             continue
         # Check if this user-specified step isn't supported by the driver
         try:
