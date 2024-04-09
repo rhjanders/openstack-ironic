@@ -1762,6 +1762,21 @@ def get_token_project_from_request(ctx):
                     'however we were unable to do so. Possible older API?')
 
 
+def cleanup_servicewait_timeout(task):
+    """Cleanup a servicing task after timeout.
+
+    :param task: a TaskManager instance.
+    """
+    last_error = (_("Timeout reached while servicing the node. Please "
+                    "check if the ramdisk responsible for the servicing is "
+                    "running on the node. Failed on step %(step)s.") %
+                  {'step': task.node.service_step})
+    logmsg = ("Servicing for node %(node)s failed. %(error)s" %
+              {'node': task.node.uuid, 'error': last_error})
+    servicing_error_handler(task, logmsg, errmsg=last_error,
+                            set_fail_state=False)
+
+
 def servicing_error_handler(task, logmsg, errmsg=None, traceback=False,
                             tear_down_service=True, set_fail_state=True,
                             set_maintenance=None):
