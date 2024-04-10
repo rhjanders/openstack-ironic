@@ -103,7 +103,8 @@ _FASTTRACK_HEARTBEAT_ALLOWED = (states.DEPLOYWAIT, states.CLEANWAIT,
                                 states.RESCUEWAIT, states.ENROLL,
                                 states.MANAGEABLE, states.AVAILABLE,
                                 states.DEPLOYING, states.CLEANHOLD,
-                                states.DEPLOYHOLD, states.SERVICEHOLD)
+                                states.DEPLOYHOLD, states.SERVICING,
+                                states.SERVICEWAIT, states.SERVICEHOLD)
 FASTTRACK_HEARTBEAT_ALLOWED = frozenset(_FASTTRACK_HEARTBEAT_ALLOWED)
 
 
