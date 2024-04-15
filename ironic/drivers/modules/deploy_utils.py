@@ -1451,13 +1451,24 @@ parse_instance_info_capabilities = (
 
 
 def get_async_step_return_state(node):
-    """Returns state based on operation (cleaning/deployment) being invoked
+    """Returns state based on operation being invoked.
 
     :param node: an ironic node object.
-    :returns: states.CLEANWAIT if cleaning operation in progress
-              or states.DEPLOYWAIT if deploy operation in progress.
+    :returns: states.CLEANWAIT if cleaning operation in progress,
+              or states.DEPLOYWAIT if deploy operation in progress,
+              or states.SERVICEWAIT if servicing in progress.
     """
-    return states.CLEANWAIT if node.clean_step else states.DEPLOYWAIT
+    # FIXME(dtantsur): this distinction is rather useless, create a new
+    # constant to use for all step types?
+    if node.clean_step:
+        return states.CLEANWAIT
+    elif node.service_step:
+        return states.SERVICEWAIT
+    else:
+        # TODO(dtantsur): ideally, check for node.deploy_step and raise
+        # something if this function is called without any step field set.
+        # Unfortunately, a lot of unit tests rely on exactly this.
+        return states.DEPLOYWAIT
 
 
 def _check_agent_token_prior_to_agent_reboot(node):
@@ -1548,6 +1559,22 @@ def reboot_to_finish_step(task, timeout=None):
 
     manager_utils.node_power_action(task, states.REBOOT, timeout)
     return get_async_step_return_state(task.node)
+
+
+def step_error_handler(task, logmsg, errmsg=None):
+    """Run the correct handler for the current step.
+
+    :param task: a TaskManager instance.
+    :param logmsg: Message to be logged.
+    :param errmsg: Message for the user. Optional, if not provided `logmsg` is
+        used.
+    """
+    if task.node.provision_state in [states.CLEANING, states.CLEANWAIT]:
+        manager_utils.cleaning_error_handler(task, logmsg, errmsg=errmsg)
+    elif task.node.provision_state in [states.DEPLOYING, states.DEPLOYWAIT]:
+        manager_utils.deploying_error_handler(task, logmsg, errmsg=errmsg)
+    elif task.node.provision_state in [states.SERVICING, states.SERVICEWAIT]:
+        manager_utils.servicing_error_handler(task, logmsg, errmsg=errmsg)
 
 
 def get_root_device_for_deploy(node):
