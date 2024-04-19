@@ -99,11 +99,9 @@ _HEARTBEAT_ALLOWED = (states.DEPLOYWAIT, states.CLEANWAIT, states.RESCUEWAIT,
                       states.SERVICEWAIT, states.SERVICEHOLD)
 HEARTBEAT_ALLOWED = frozenset(_HEARTBEAT_ALLOWED)
 
-_FASTTRACK_HEARTBEAT_ALLOWED = (states.DEPLOYWAIT, states.CLEANWAIT,
-                                states.RESCUEWAIT, states.ENROLL,
-                                states.MANAGEABLE, states.AVAILABLE,
-                                states.DEPLOYING, states.CLEANHOLD,
-                                states.DEPLOYHOLD, states.SERVICEHOLD)
+_FASTTRACK_HEARTBEAT_ALLOWED = _HEARTBEAT_ALLOWED + (states.MANAGEABLE,
+                                                     states.AVAILABLE,
+                                                     states.ENROLL)
 FASTTRACK_HEARTBEAT_ALLOWED = frozenset(_FASTTRACK_HEARTBEAT_ALLOWED)
 
 
@@ -586,7 +584,7 @@ class HeartbeatMixin(object):
         try:
             node.touch_provisioning()
             if not node.service_step:
-                LOG.debug('Node %s just booted to start %s service',
+                LOG.debug('Node %s just booted to start service',
                           node.uuid)
                 msg = _('Node failed to start the first service step')
                 task.process_event('resume')
@@ -856,14 +854,7 @@ class AgentBaseMixin(object):
         :returns: A list of service step dictionaries, if an error
                   occurs, then an empty list is returned.
         """
-        new_priorities = {
-            'erase_devices': CONF.deploy.erase_devices_priority,
-            'erase_devices_metadata':
-                CONF.deploy.erase_devices_metadata_priority,
-        }
-        return get_steps(
-            task, 'service',
-            override_priorities=new_priorities)
+        return get_steps(task, 'service')
 
     @METRICS.timer('AgentBaseMixin.refresh_steps')
     def refresh_steps(self, task, step_type):
