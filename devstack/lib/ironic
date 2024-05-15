@@ -612,6 +612,9 @@ PHYSICAL_NETWORK=${NEUTRON_PHYSICAL_NETWORK:-${PHYSICAL_NETWORK:-}}
 # NOTE(TheJulia): As of May 19th, 2023, mirrors.dotsrc.org was
 # accessible via ipv4 and ipv6, it appears to be the only v6
 # accessible tinycore mirror..
+# NOTE(TheJulia): The TinyCore Image *is* only compatible with
+# BIOS booting. iPXE loaders with UEFI mode will ERROR pointing
+# to https://ipxe.org/err/7f22208e.
 IRONIC_RAMDISK_IMAGE=${IRONIC_RAMDISK_IMAGE:-http://mirrors.dotsrc.org/tinycorelinux/14.x/x86/release/Core-current.iso}
 
 IRONIC_LOADER_PATHS=${IRONIC_LOADER_PATHS:-}
@@ -3003,7 +3006,7 @@ function upload_image_if_needed {
         openstack image create $IRONIC_PARTITIONED_IMAGE_NAME \
             --public --disk-format raw --container-format bare \
             --property kernel_id=$kernel_id --property ramdisk_id=$ramdisk_id \
-            --file "$dest"
+            --file $(readlink -f "$dest")
 
         # Change the default image only if the provided settings prevent the
         # default cirros image from working.
@@ -3072,7 +3075,7 @@ function upload_baremetal_ironic_efiboot {
         --public --disk-format=raw \
         --container-format=bare \
         -f value -c id \
-        < $IRONIC_EFIBOOT)
+        --file $(readlink -f $IRONIC_EFIBOOT))
     die_if_not_set $LINENO IRONIC_EFIBOOT_ID "Failed to load EFI bootloader image into glance"
 
     iniset $IRONIC_CONF_FILE conductor bootloader $IRONIC_EFIBOOT_ID
@@ -3145,7 +3148,8 @@ function upload_baremetal_ironic_deploy {
                 $ironic_deploy_kernel_name \
                 --public --disk-format=aki \
                 --container-format=aki \
-                < $IRONIC_DEPLOY_KERNEL  | grep ' id ' | get_field 2)
+                --file $(readlink -f $IRONIC_DEPLOY_KERNEL)  | \
+                grep ' id ' | get_field 2)
             die_if_not_set $LINENO IRONIC_DEPLOY_KERNEL_ID "Failed to load kernel image into glance"
 
             IRONIC_DEPLOY_RAMDISK_ID=$(openstack --os-cloud devstack-admin \
@@ -3153,7 +3157,8 @@ function upload_baremetal_ironic_deploy {
                 $ironic_deploy_ramdisk_name \
                 --public --disk-format=ari \
                 --container-format=ari \
-                < $IRONIC_DEPLOY_RAMDISK  | grep ' id ' | get_field 2)
+                --file $(readlink -f $IRONIC_DEPLOY_RAMDISK)  | \
+                grep ' id ' | get_field 2)
             die_if_not_set $LINENO IRONIC_DEPLOY_RAMDISK_ID "Failed to load ramdisk image into glance"
 
         else
@@ -3162,7 +3167,7 @@ function upload_baremetal_ironic_deploy {
                 $(basename $IRONIC_DEPLOY_ISO) \
                 --public --disk-format=iso \
                 --container-format=bare \
-                < $IRONIC_DEPLOY_ISO  -f value -c id)
+                --file $(readlink -f $IRONIC_DEPLOY_ISO)  -f value -c id)
             die_if_not_set $LINENO IRONIC_DEPLOY_ISO_ID "Failed to load deploy iso into glance"
         fi
     else
@@ -3334,8 +3339,11 @@ function ironic_configure_tempest {
         iniset $TEMPEST_CONFIG baremetal partition_image_ref $image_uuid
     fi
 
-    # Our cirros images cannot do local boot in legacy mode.
-    if [[ "${IRONIC_PARTITIONED_IMAGE_NAME}" =~ cirros && "${IRONIC_BOOT_MODE}" == "bios" ]]; then
+    # Our cirros images cannot do local boot and we don't support
+    # Netboot anymore, but the conditional is still used because
+    # some boot constraints exist around cirros. i.e. the setting
+    # likely should just be "don't attempt the partition boot test.
+    if [[ "${IRONIC_PARTITIONED_IMAGE_NAME}" =~ cirros ]]; then
         iniset $TEMPEST_CONFIG baremetal partition_netboot True
     else
         iniset $TEMPEST_CONFIG baremetal partition_netboot False
