@@ -17,7 +17,6 @@ Hardware Types
 .. toctree::
   :maxdepth: 1
 
-  drivers/ibmc
   drivers/idrac
   drivers/ilo
   drivers/intel-ipmi
@@ -25,7 +24,6 @@ Hardware Types
   drivers/irmc
   drivers/redfish
   drivers/snmp
-  drivers/xclarity
   drivers/fake
 
 Changing Hardware Types and Interfaces

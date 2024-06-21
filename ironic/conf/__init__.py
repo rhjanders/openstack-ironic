@@ -32,7 +32,6 @@ from ironic.conf import drac
 from ironic.conf import fake
 from ironic.conf import glance
 from ironic.conf import healthcheck
-from ironic.conf import ibmc
 from ironic.conf import ilo
 from ironic.conf import inspector
 from ironic.conf import inventory
@@ -49,7 +48,6 @@ from ironic.conf import sensor_data
 from ironic.conf import service_catalog
 from ironic.conf import snmp
 from ironic.conf import swift
-from ironic.conf import xclarity
 
 CONF = cfg.CONF
 
@@ -70,7 +68,6 @@ dnsmasq.register_opts(CONF)
 fake.register_opts(CONF)
 glance.register_opts(CONF)
 healthcheck.register_opts(CONF)
-ibmc.register_opts(CONF)
 ilo.register_opts(CONF)
 inspector.register_opts(CONF)
 inventory.register_opts(CONF)
@@ -87,4 +84,3 @@ sensor_data.register_opts(CONF)
 service_catalog.register_opts(CONF)
 snmp.register_opts(CONF)
 swift.register_opts(CONF)
-xclarity.register_opts(CONF)
