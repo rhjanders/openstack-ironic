@@ -651,10 +651,6 @@ class InstanceUnrescueFailure(IronicException):
                  '%(node)s: %(reason)s')
 
 
-class XClarityError(IronicException):
-    _msg_fmt = _("XClarity exception occurred. Error: %(error)s")
-
-
 class BIOSSettingAlreadyExists(Conflict):
     _msg_fmt = _('A BIOS setting %(name)s for node %(node)s already exists.')
 
@@ -722,14 +718,6 @@ class InvalidKickstartTemplate(Invalid):
 
 class InvalidKickstartFile(Invalid):
     _msg_fmt = _("The kickstart file is not valid.")
-
-
-class IBMCError(DriverOperationError):
-    _msg_fmt = _("IBMC exception occurred on node %(node)s. Error: %(error)s")
-
-
-class IBMCConnectionError(IBMCError):
-    _msg_fmt = _("IBMC connection failed for node %(node)s: %(error)s")
 
 
 class ClientSideError(RuntimeError):
