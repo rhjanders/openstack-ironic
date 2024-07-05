@@ -44,6 +44,13 @@ User Guide
 
   user/index
 
+.. toctree::
+  :maxdepth: 1
+
+  API Concept Guide <contributor/webapi>
+  API Reference (latest) <https://docs.openstack.org/api-ref/baremetal/>
+  API Version History <contributor/webapi-version-history>
+
 Administrator Guide
 ===================
 
@@ -55,52 +62,42 @@ Administrator Guide
 .. toctree::
   :maxdepth: 2
 
-  admin/index
-
-Configuration Guide
-===================
+  admin/features
 
 .. toctree::
   :maxdepth: 2
 
-  configuration/index
-
-Bare Metal API References
-=========================
-
-Ironic's REST API has changed since its first release, and continues to evolve
-to meet the changing needs of the community.  Here we provide a conceptual
-guide as well as more detailed reference documentation.
-
-.. toctree::
-  :maxdepth: 1
-
-  API Concept Guide <contributor/webapi>
-  API Reference (latest) <https://docs.openstack.org/api-ref/baremetal/>
-  API Version History <contributor/webapi-version-history>
-
-Command References
-==================
-
-Here are references for commands not elsewhere documented.
+  admin/operation
 
 .. toctree::
   :maxdepth: 2
 
   cli/index
 
+.. toctree::
+  :maxdepth: 2
+
+  configuration/index
+
+.. toctree::
+  :maxdepth: 2
+
+  admin/architecture
+
+* `Release Notes <https://docs.openstack.org/releasenotes/ironic/>`_
+
+.. toctree::
+  :hidden:
+
+  admin/index
+
 Contributor Guide
 =================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    contributor/index
-
-Release Notes
-=============
-
-`Release Notes <https://docs.openstack.org/releasenotes/ironic/>`_
 
 .. only:: html
 
