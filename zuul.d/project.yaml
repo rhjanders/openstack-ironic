@@ -19,8 +19,6 @@
         - ironic-tempest-functional-python3
         # NOTE(rpittau) moving to non-voting until we fix the tests
         # see also https://review.opendev.org/c/openstack/ironic-tempest-plugin/+/882312
-        - ironic-tempest-functional-rbac-scope-enforced:
-            voting: false
         - ironic-grenade
         - ironic-grenade-skip-level:
             voting: false
@@ -49,9 +47,7 @@
         # NOTE(TheJulia): At present, metal3 doesn't leverage
         # stable branches, and as far as we are aware these jobs
         # can be removed once this branch is made stable.
-        # FIXME(dtantsur): Re-enable once we merge the fix
-        # https://review.opendev.org/c/openstack/ironic/+/928885
-        # - metal3-integration
+        - metal3-integration
         # Non-voting jobs
         - ironic-inspector-tempest:
             voting: false
@@ -64,8 +60,6 @@
         - ironic-tempest-ipxe-ipv6:
             voting: false
         - ironic-standalone-anaconda:
-            voting: false
-        - ironic-inspector-tempest-rbac-scope-enforced:
             voting: false
         - bifrost-integration-tinyipa-ubuntu-jammy:
             voting: false
@@ -82,9 +76,6 @@
         - ironic-tox-unit-mysql-migrations
         - ironic-tox-unit-with-driver-libs
         - ironic-tempest-functional-python3
-        # NOTE(rpittau) disabled until we fix the tests
-        # see also https://review.opendev.org/c/openstack/ironic-tempest-plugin/+/882312
-        # - ironic-tempest-functional-rbac-scope-enforced
         - ironic-grenade
         # NOTE(JayF): Disabling standalone jobs on 20240228 from voting, there's a
         # dnsmasq bug only exposed on these jobs.
@@ -105,7 +96,7 @@
         # NOTE(TheJulia): At present, metal3 doesn't leverage
         # stable branches, and as far as we are aware these jobs
         # can be removed once this branch is made stable.
-        # - metal3-integration
+        - metal3-integration
     experimental:
       jobs:
         # TODO(dtantsur): these jobs are useful but currently hopelessly
