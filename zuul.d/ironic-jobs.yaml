@@ -1019,6 +1019,23 @@
     parent: ironic-tempest-bios-ipmi-direct-tinyipa
 
 - job:
+    name: ironic-tempest-uefi-redfish-vmedia-4k
+    description: "Build 4k disk artifacts with 4k VMs"
+    parent: ironic-tempest-uefi-redfish-vmedia
+    vars:
+      devstack_localrc:
+        IRONIC_AUTOMATED_CLEAN_ENABLED: False
+        IRONIC_VM_COUNT: 1
+        IRONIC_VM_BLOCK_SIZE: 4096
+        IRONIC_BUILD_DIB_IMAGE: True
+        SWIFT_ENABLE_TEMPURLS: False
+        # This job by defaults deploys a dib cirros image,
+        # and to do so, the instance user is not cirros.
+        DEFAULT_INSTANCE_USER: "cloud-user"
+        IRONIC_DEFAULT_RESCUE_INTERFACE: "no-rescue"
+        IRONIC_ENABLED_RESCUE_INTERFACES: "fake,no-rescue"
+
+- job:
     name: ironic-grenade
     parent: grenade
     timeout: 10800
@@ -1079,6 +1096,9 @@
           # Required as different access rights are used by default
           # and the classic devstack config which is defaulted doesn't work.
           IRONIC_ENFORCE_SCOPE: True
+          # By default Grenade works on virtual env but Ironic need more work
+          # to enable it. Once Ironic is ready we can remove the below setting. 
+          GLOBAL_VENV: false
         old:
           IRONIC_VM_LOG_DIR: '{{ devstack_bases.old }}/ironic-bm-logs'
       grenade_localrc:
@@ -1187,6 +1207,9 @@
           EBTABLES_RACE_FIX: True
           LIBVIRT_STORAGE_POOL_PATH: /opt/libvirt/images
           IRONIC_VM_LOG_DIR: '/opt/stack/ironic-bm-logs'
+          # By default Grenade works on virtual env but Ironic need more work
+          # to enable it. Once Ironic is ready we can remove the below setting.
+          GLOBAL_VENV: false
       grenade_localrc:
         BASE_RUN_SMOKE: False
       devstack_plugins:
