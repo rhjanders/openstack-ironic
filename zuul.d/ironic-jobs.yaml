@@ -31,7 +31,7 @@
       - ^tox.ini$
     vars:
       tox_envlist: all
-      tempest_test_timeout: 2400
+      tempest_test_timeout: 2600
       tempest_test_regex: ironic_tempest_plugin.tests.scenario
       tempest_concurrency: 1
       devstack_localrc:
@@ -39,14 +39,14 @@
         FORCE_CONFIG_DRIVE: True
         INSTALL_TEMPEST: False # Don't install a tempest package globally
         VIRT_DRIVER: ironic
-        BUILD_TIMEOUT: 1800
+        BUILD_TIMEOUT: 2000
         IRONIC_BAREMETAL_BASIC_OPS: True
         IRONIC_BUILD_DEPLOY_RAMDISK: False
         IRONIC_CALLBACK_TIMEOUT: 1800
         IRONIC_DEPLOY_DRIVER: ipmi
         IRONIC_INSPECTOR_BUILD_RAMDISK: False
         IRONIC_INSPECTOR_TEMPEST_INTROSPECTION_TIMEOUT: 1200
-        IRONIC_TEMPEST_BUILD_TIMEOUT: 1800
+        IRONIC_TEMPEST_BUILD_TIMEOUT: 2000
         IRONIC_TEMPEST_WHOLE_DISK_IMAGE: False
         IRONIC_VM_COUNT: 2
         IRONIC_VM_EPHEMERAL_DISK: 1
@@ -214,6 +214,12 @@
         # a small root partition, so use /opt which is mounted from a bigger
         # ephemeral partition on such nodes
         LIBVIRT_STORAGE_POOL_PATH: /opt/libvirt/images
+        Q_AGENT: ovn
+        Q_ML2_TENANT_NETWORK_TYPE: vlan
+        Q_ML2_PLUGIN_MECHANISM_DRIVERS: ovn
+        ENABLE_CHASSIS_AS_GW: True
+        ML2_L3_PLUGIN: "ovn-router,trunk"
+        OVN_DBS_LOG_LEVEL: dbg
       devstack_services:
         n-api: False
         n-api-meta: False
@@ -227,6 +233,12 @@
         s-container: False
         s-object: False
         s-proxy: False
+        q-agt: False
+        q-dhcp: False
+        q-l3: False
+        ovn-controller: True
+        ovn-northd: True
+        q-ovn-metadata-agent: True
 
 - job:
     name: ironic-standalone-redfish

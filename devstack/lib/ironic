@@ -1279,7 +1279,7 @@ function install_ironic {
     fi
 
     if is_service_enabled ir-novnc; then
-        # a websockets/html5 or flash powered VNC console for vm instances
+        # a websockets/html5 VNC console for bare metal hosts
         NOVNC_FROM_PACKAGE=$(trueorfalse False NOVNC_FROM_PACKAGE)
         if [ "$NOVNC_FROM_PACKAGE" = "True" ]; then
             # Installing novnc on Debian bullseye breaks the global pip
@@ -1303,6 +1303,12 @@ function install_ironic {
             NOVNC_WEB_DIR=$DEST/novnc
             git_clone $NOVNC_REPO $NOVNC_WEB_DIR $NOVNC_BRANCH
         fi
+        # podman, systemd-container required by the systemd container provider
+        # buildah required below to build the VNC container
+        install_package podman systemd-container buildah
+        pushd $IRONIC_DIR/tools/vnc-container
+        buildah bud -f ./Containerfile -t localhost/ironic-vnc-container
+        popd
     fi
 }
 
@@ -2046,12 +2052,16 @@ function configure_ironic_novnc {
     # TODO(stevebaker) handle configuring tls-proxy
     local service_protocol=http
 
+    # TODO(stevebaker) check for existence of vnc_lite.html vs vnc_auto.html
+    # from older NoVNC releases
     novnc_url=$service_protocol://$SERVICE_HOST:$service_port/vnc_lite.html
     iniset $IRONIC_CONF_FILE vnc enabled True
     iniset $IRONIC_CONF_FILE vnc public_url $novnc_url
     iniset $IRONIC_CONF_FILE vnc host_ip $SERVICE_HOST
     iniset $IRONIC_CONF_FILE vnc port $service_port
     iniset $IRONIC_CONF_FILE vnc novnc_web $NOVNC_WEB_DIR
+    iniset $IRONIC_CONF_FILE vnc container_provider systemd
+    iniset $IRONIC_CONF_FILE vnc console_image localhost/ironic-vnc-container
 
 }
 
@@ -2064,6 +2074,19 @@ function create_ironic_cache_dir {
     sudo mkdir -p $IRONIC_AUTH_CACHE_DIR/registry
     sudo chown $STACK_USER $IRONIC_AUTH_CACHE_DIR/registry
     rm -f $IRONIC_AUTH_CACHE_DIR/registry/*
+}
+
+# create_systemd_container_dir() - Part of the init_ironic() process
+function create_systemd_container_dir {
+
+    local uid=$(id -u)
+    local user_dir=/etc/containers/systemd/users/$uid
+    if [ ! -d "$user_dir" ]; then
+        sudo mkdir -p $user_dir
+        sudo chown $STACK_USER $user_dir
+        # container files have BMC credentials, limit non stack user
+        sudo chmod 0750 $user_dir
+    fi
 }
 
 # create_ironic_accounts() - Set up common required ironic accounts
@@ -2117,6 +2140,9 @@ function init_ironic {
     $IRONIC_BIN_DIR/ironic-status upgrade check && ret_val=$? || ret_val=$?
     if [ $ret_val -gt 1 ] ; then
         die $LINENO "The `ironic-status upgrade check` command returned an error. Cannot proceed."
+    fi
+    if is_service_enabled ir-novnc; then
+        create_systemd_container_dir
     fi
 }
 
@@ -2182,7 +2208,9 @@ function start_ironic_api {
 # start_ironic_conductor() - Used by start_ironic().
 # Starts Ironic conductor.
 function start_ironic_conductor {
-    run_process ir-cond "$IRONIC_BIN_DIR/ironic-conductor --config-file=$IRONIC_CONF_FILE"
+    # NOTE(stevebaker) set DBUS_SESSION_BUS_ADDRESS so that systemd calls can be made
+    # for the systemd console container provider.
+    run_process ir-cond "$IRONIC_BIN_DIR/ironic-conductor --config-file=$IRONIC_CONF_FILE" "" "" "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$UID/bus"
 
     # Unset variables which we shouldn't have... Grenade resets these :\
     # in grenade/projects/60_nova/resources.sh as part of the resource
@@ -3006,34 +3034,36 @@ function configure_iptables {
 }
 
 function configure_tftpd {
-    # stop tftpd and setup serving via xinetd
-    stop_service tftpd-hpa || true
-    [ -f /etc/init/tftpd-hpa.conf ] && echo "manual" | sudo tee /etc/init/tftpd-hpa.override
-    sudo cp $IRONIC_TEMPLATES_DIR/tftpd-xinetd.template /etc/xinetd.d/tftp
-    sudo sed -e "s|%TFTPBOOT_DIR%|$IRONIC_TFTPBOOT_DIR|g" -i /etc/xinetd.d/tftp
-    sudo sed -e "s|%MAX_BLOCKSIZE%|$IRONIC_TFTP_BLOCKSIZE|g" -i /etc/xinetd.d/tftp
-    if [[ "$IRONIC_IP_VERSION" == '6' ]]; then
-        sudo sed -e "s|IPv4|IPv6|g" -i /etc/xinetd.d/tftp
+    if [[ "${IRONIC_ENABLE_TFTP:-True}" == "True" ]]; then
+        # stop tftpd and setup serving via xinetd
+        stop_service tftpd-hpa || true
+        [ -f /etc/init/tftpd-hpa.conf ] && echo "manual" | sudo tee /etc/init/tftpd-hpa.override
+        sudo cp $IRONIC_TEMPLATES_DIR/tftpd-xinetd.template /etc/xinetd.d/tftp
+        sudo sed -e "s|%TFTPBOOT_DIR%|$IRONIC_TFTPBOOT_DIR|g" -i /etc/xinetd.d/tftp
+        sudo sed -e "s|%MAX_BLOCKSIZE%|$IRONIC_TFTP_BLOCKSIZE|g" -i /etc/xinetd.d/tftp
+        if [[ "$IRONIC_IP_VERSION" == '6' ]]; then
+            sudo sed -e "s|IPv4|IPv6|g" -i /etc/xinetd.d/tftp
+        fi
+        # setup tftp file mapping to satisfy requests at the root (booting) and
+        # /tftpboot/ sub-dir (as per deploy-ironic elements)
+        # this section is only for ubuntu and fedora
+        if [[ "$IRONIC_IPXE_ENABLED" == "False" && \
+                ( "$IRONIC_BOOT_MODE" == "uefi" || "$IRONIC_SECURE_BOOT" == "True" ) && \
+                "$IRONIC_UEFI_BOOT_LOADER" == "grub2" ]]; then
+
+            echo "re ^($IRONIC_TFTPBOOT_DIR/) $IRONIC_TFTPBOOT_DIR/\2"  >$IRONIC_TFTPBOOT_DIR/map-file
+            echo "re ^$IRONIC_TFTPBOOT_DIR/ $IRONIC_TFTPBOOT_DIR/"  >>$IRONIC_TFTPBOOT_DIR/map-file
+            echo "re ^(^/) $IRONIC_TFTPBOOT_DIR/\1"  >>$IRONIC_TFTPBOOT_DIR/map-file
+            echo "re ^([^/]) $IRONIC_TFTPBOOT_DIR/\1" >>$IRONIC_TFTPBOOT_DIR/map-file
+
+        else
+            echo "r ^([^/]) $IRONIC_TFTPBOOT_DIR/\1" >$IRONIC_TFTPBOOT_DIR/map-file
+            echo "r ^(/tftpboot/) $IRONIC_TFTPBOOT_DIR/\2" >>$IRONIC_TFTPBOOT_DIR/map-file
+        fi
+
+        sudo chmod -R 0755 $IRONIC_TFTPBOOT_DIR
+        restart_service xinetd
     fi
-    # setup tftp file mapping to satisfy requests at the root (booting) and
-    # /tftpboot/ sub-dir (as per deploy-ironic elements)
-    # this section is only for ubuntu and fedora
-    if [[ "$IRONIC_IPXE_ENABLED" == "False" && \
-            ( "$IRONIC_BOOT_MODE" == "uefi" || "$IRONIC_SECURE_BOOT" == "True" ) && \
-            "$IRONIC_UEFI_BOOT_LOADER" == "grub2" ]]; then
-
-        echo "re ^($IRONIC_TFTPBOOT_DIR/) $IRONIC_TFTPBOOT_DIR/\2"  >$IRONIC_TFTPBOOT_DIR/map-file
-        echo "re ^$IRONIC_TFTPBOOT_DIR/ $IRONIC_TFTPBOOT_DIR/"  >>$IRONIC_TFTPBOOT_DIR/map-file
-        echo "re ^(^/) $IRONIC_TFTPBOOT_DIR/\1"  >>$IRONIC_TFTPBOOT_DIR/map-file
-        echo "re ^([^/]) $IRONIC_TFTPBOOT_DIR/\1" >>$IRONIC_TFTPBOOT_DIR/map-file
-
-    else
-        echo "r ^([^/]) $IRONIC_TFTPBOOT_DIR/\1" >$IRONIC_TFTPBOOT_DIR/map-file
-        echo "r ^(/tftpboot/) $IRONIC_TFTPBOOT_DIR/\2" >>$IRONIC_TFTPBOOT_DIR/map-file
-    fi
-
-    sudo chmod -R 0755 $IRONIC_TFTPBOOT_DIR
-    restart_service xinetd
 }
 
 function build_ipa_ramdisk {
@@ -3671,7 +3701,7 @@ function downgrade_dnsmasq {
         # includes the fix for the crash issue described in
         # https://bugs.launchpad.net/ironic/+bug/2026757
         # This patch has yet to be included in a release.
-        if dnsmasq --version | grep -q "Dnsmasq version 2.90"; then
+        if [[ -f /opt/stack/.patched-dnsmasq ]]; then
             # NOTE(JayF) Keep Ironic devstack plugin idempotent by skipping
             # downgrade if we already have the desired version.
             echo "Dnsmasq already downgraded, continuing..."
@@ -3684,8 +3714,11 @@ function downgrade_dnsmasq {
             git clone http://thekelleys.org.uk/git/dnsmasq.git $DNSMASQ_DIR
             pushd $DNSMASQ_DIR
             # https://thekelleys.org.uk/gitweb/?p=dnsmasq.git;a=commitdiff;h=f006be7842104a9f86fbf419326b7aad08ade61d
-            git checkout f006be7842104a9f86fbf419326b7aad08ade61d
+            # above is the specific patch we need; but using the 2.91 RC which
+            # includes that (and more)
+            git checkout v2.91rc5
             sudo make PREFIX=/usr install
+            sudo touch /opt/stack/.patched-dnsmasq
             popd
             rm -rf $DNSMASQ_DIR
         fi
