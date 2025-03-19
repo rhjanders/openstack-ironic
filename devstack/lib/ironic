@@ -1169,6 +1169,8 @@ function cleanup_redfish {
 function install_redfish {
     # TODO(lucasagomes): Use Apache WSGI instead of gunicorn
 
+    . /opt/stack/data/venv/bin/activate
+
     if is_fedora; then
         install_package python3-gunicorn
     else
@@ -1196,7 +1198,14 @@ function install_redfish {
     # NOTE(dtantsur): log all accesses to stdout
     cmd+=" --access-logfile=- --error-logfile=-"
 
+    # Exit virtualenv once installation is complete
+    deactivate
+
     write_user_unit_file $IRONIC_REDFISH_EMULATOR_SYSTEMD_SERVICE "$cmd" "" "$STACK_USER"
+
+    # update unit file reference
+    local unitfile="$SYSTEMD_DIR/$IRONIC_REDFISH_EMULATOR_SYSTEMD_SERVICE"
+    iniset -sudo $unitfile "Service" "Environment" "PATH=/opt/stack/data/venv/bin:$PATH"
 
     enable_service $IRONIC_REDFISH_EMULATOR_SYSTEMD_SERVICE
 }
@@ -1368,6 +1377,13 @@ function cleanup_ironic {
 
     # Remove the hook to disable log rotate
     sudo rm -rf $IRONIC_LIBVIRT_HOOKS_PATH/qemu
+
+    # Force fresh rebuild of local build IPA on next run
+    if [[ "$IRONIC_BUILD_DEPLOY_RAMDISK" == "True" ]]; then
+        sudo rm -f $IRONIC_DEPLOY_KERNEL
+        sudo rm -f $IRONIC_DEPLOY_RAMDISK
+        sudo rm -f $IRONIC_DEPLOY_ISO
+    fi
 }
 
 # configure_ironic_dirs() - Create all directories required by Ironic and
