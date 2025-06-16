@@ -676,6 +676,7 @@ def wipe_cleaning_internal_info(task):
     node.del_driver_internal_info('clean_step_index')
     node.del_driver_internal_info('cleaning_disable_ramdisk')
     node.del_driver_internal_info('steps_validated')
+    node.del_driver_internal_info('declarative_cleaning')
     async_steps.remove_node_flags(node)
 
 
@@ -1653,7 +1654,7 @@ def node_cache_boot_mode(task):
         task.node.secure_boot = secure_boot
         task.node.save()
         LOG.info("Updated boot_mode %(boot_mode)s, secure_boot %(secure_boot)s"
-                 "for node %(node)s",
+                 " for node %(node)s",
                  {'boot_mode': boot_mode, 'secure_boot': secure_boot,
                   'node': task.node.uuid})
 
