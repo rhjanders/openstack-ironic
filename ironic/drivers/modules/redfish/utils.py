@@ -30,6 +30,7 @@ from ironic.common import exception
 from ironic.common.i18n import _
 from ironic.common import utils
 from ironic.conf import CONF
+from ironic.drivers import utils as driver_utils
 
 LOG = log.getLogger(__name__)
 
@@ -71,7 +72,12 @@ OPTIONAL_PROPERTIES = {
     'redfish_auth_type': _('Redfish HTTP client authentication method. Can be '
                            '"basic", "session" or "auto". If not set, the '
                            'default value is taken from Ironic '
-                           'configuration as ``[redfish]auth_type`` option.')
+                           'configuration as ``[redfish]auth_type`` option.'),
+    'firmware_update_unresponsive_bmc_wait': _(
+        'Number of seconds to wait to avoid the BMC becoming unresponsive '
+        'during firmware updates. If not set, the default value is taken from '
+        'the Ironic configuration ``firmware_update_wait_unresponsive_bmc`` '
+        'in the ``[redfish]`` section.')
 }
 
 COMMON_PROPERTIES = REQUIRED_PROPERTIES.copy()
@@ -151,7 +157,8 @@ def parse_driver_info(node):
                 {'value': driver_info['redfish_system_id'], 'node': node.uuid})
 
     # Check if verify_ca is a Boolean or a file/directory in the file-system
-    verify_ca = driver_info.get('redfish_verify_ca', True)
+    verify_ca = driver_utils.get_verify_ca(
+        node, driver_info.get('redfish_verify_ca', True))
     if isinstance(verify_ca, str):
         if os.path.isdir(verify_ca) or os.path.isfile(verify_ca):
             pass
@@ -192,6 +199,10 @@ def parse_driver_info(node):
                     'node_uuid': node.uuid}
     if root_prefix:
         sushy_params['root_prefix'] = root_prefix
+
+    unres_bmc_wait = driver_info.get('firmware_update_unresponsive_bmc_wait')
+    if unres_bmc_wait:
+        sushy_params['firmware_update_unresponsive_bmc_wait'] = unres_bmc_wait
 
     return sushy_params
 

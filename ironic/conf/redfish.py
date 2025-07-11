@@ -90,6 +90,11 @@ opts = [
                default=60,
                help=_('Number of seconds to wait between checking for '
                       'failed firmware update tasks')),
+    cfg.IntOpt('firmware_update_wait_unresponsive_bmc',
+               min=0,
+               default=300,
+               help=_('Number of seconds to wait before proceeding with the '
+                      'reboot to finish the BMC firmware update step')),
     cfg.StrOpt('firmware_source',
                choices=[('http', _('If firmware source URL is also HTTP, then '
                                    'serve from original location, otherwise '
@@ -121,6 +126,9 @@ opts = [
                help=_('Number of seconds to wait for boot mode or secure '
                       'boot status change to take effect after a reboot. '
                       'Set to 0 to disable waiting.')),
+    cfg.StrOpt('verify_ca',
+               help=_('The default verify_ca path when redfish_verify_ca '
+                      'in driver_info is missing or set to True.')),
 ]
 
 
